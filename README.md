@@ -1,5 +1,5 @@
 # nix-docs
 
-A helper library for generate module documentation.
+A helper library for generating NixOS module and library documentation.
 
-Set [docs/lib/docs.md](docs/lib/docs.md) for a list of functions.
+See [docs/lib/docs.md](docs/lib/docs.md) for a list of functions.
