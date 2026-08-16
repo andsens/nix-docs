@@ -76,11 +76,11 @@ Generate options documentation for NixOS modules.
 
 `options`: Attrset of options to generate the documentation from
 
-`repoPath`: Path to the root of the repository, transforms source paths into relative paths (optional)
+`repoPath`: Path to the root of the repository, transforms source paths into relative paths (*optional*)
 
-`repoLinkPrefix`: URL prefix for creating source file links (optional, requires `repoPath` to be set)
+`repoLinkPrefix`: URL prefix for creating source file links (*optional*, requires `repoPath` to be set)
 
-`visible` (`Option -> Bool`): A predicate for filtering out unwanted options (optional)
+`visible` (`Option -> Bool`): A predicate for filtering out unwanted options (*optional*)
 
 ### Output
 
