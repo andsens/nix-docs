@@ -1,6 +1,45 @@
 { lib, ... }:
 {
-  copyToRepo =
+  /**
+    Copy a set of derivations to relative paths in the current working directory.
+    Removes any existing destination paths.
+
+    # Arguments
+
+    `pkgs`: nixpkgs
+
+    `paths` (`{ [String] :: Derivation }`): An attrset of `{ [RelPath] :: Derivation}`
+
+    # Example
+
+    (in `flake.nix`)
+    ```nix
+    perSystem =
+      { pkgs, system, ... }:
+      let
+        lib-docs = inputs.nix-docs.lib.docs.lib {
+          inherit pkgs;
+          paths.lib = ./nix/lib;
+        };
+        options-docs = inputs.docs.lib.docs.options {
+          inherit pkgs;
+          options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+          repoPath = toString self;
+          repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
+        };
+      in
+      {
+        apps.update-docs.program = inputs.nix-docs.lib.docs.updateRepo {
+          inherit pkgs;
+          paths."docs/lib" = "${lib-docs}/lib";
+          paths."docs/options.md" = options-docs.optionsCommonMark;
+        };
+      };
+    ```
+
+    Run with `nix run '.#update-docs'`
+  */
+  updateRepo =
     {
       pkgs,
       paths,
@@ -32,12 +71,34 @@
         '') paths
       )}
     '';
+  /**
+    Using `nixdoc` generate documentation for all annotated functions in the
+    files referenced through `paths`.
+
+    # Arguments
+
+    `pkgs`: nixpkgs
+
+    `paths` (`{ [String] :: Path }`): An attrset of `{ [RelPath] :: RepoPath}`
+
+    # Output
+
+    A derivation containing markdown docs structurally mirroring `RepoPath`
+    with `RelPath` as the root directory.
+
+    # Example
+
+    ```nix
+    inputs.nix-docs.lib.docs.lib {
+      inherit pkgs;
+      paths.lib = ./nix/lib;
+    }
+    ```
+  */
   lib =
     {
-      repoPath,
-      paths,
       pkgs,
-      anchorPrefix ? "function-library-",
+      paths,
     }:
     pkgs.callPackage (
       {
@@ -56,8 +117,7 @@
             outpath=$out/$dest/$name.md
             mkdir -p "$(dirname "$outpath")"
             ${lib.getExe nixdoc} --file "$file" \
-              --prefix "$dest" --category "$name" --description "$name" \
-              --anchor-prefix ${lib.escapeShellArg anchorPrefix} | \
+              --prefix "$dest" --category "$name" --description "$name" | \
               ${lib.getExe pkgs.gnused} 's/{#[^#]\+}//g' >"$outpath"
           done
         }
@@ -68,16 +128,46 @@
         )}
       ''
     ) { };
+  /**
+    Generate options documentation for NixOS modules.
+
+    # Arguments
+
+    `pkgs`: nixpkgs
+
+    `options`: Attrset of options to generate the documentation from
+
+    `repoPath`: Path to the root of the repository, transforms source paths into relative paths (optional)
+
+    `repoLinkPrefix`: URL prefix for creating source file links (optional, requires `repoPath` to be set)
+
+    `visible` (`Option -> Bool`): A predicate for filtering out unwanted options (optional)
+
+    # Output
+
+    The same as [`pkgs.nixosOptionsDoc`](https://github.com/NixOS/nixpkgs/blob/8c50a710ddca43d7a530fb805ad55bde8d0141c5/nixos/lib/make-options-doc/default.nix#L179-L247).
+    An attrSet of `optionsAsciiDoc`, `optionsCommonMark`, and `optionsJSON`.
+    All values being derivation files containing the documentation in the corresponding format.
+
+    # Example
+
+    (in `flake.nix`)
+    ```nix
+    inputs.docs.lib.docs.options {
+      inherit pkgs;
+      options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+      repoPath = toString self;
+      repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
+    }
+    ```
+  */
   options =
     {
-      name,
-      repoPath,
-      repoLinkPrefix,
-      modules,
-      optionRoot,
-      includeOption ? opt: true,
       pkgs,
-      anchorPrefix ? "opt-",
+      options,
+      repoPath ? null,
+      repoLinkPrefix ? null,
+      visible ? opt: true,
     }:
     pkgs.callPackage (
       {
@@ -87,36 +177,29 @@
         nixos-render-docs,
         ...
       }:
-      let
-        options =
-          optionRoot
-            (lib.evalModules {
-              modules = lib.attrValues modules;
-            }).options;
-      in
       nixosOptionsDoc {
         inherit options;
-        optionIdPrefix = anchorPrefix;
         transformOptions =
           opt:
           opt
           // {
-            visible = includeOption opt;
+            visible = visible opt;
+          }
+          // lib.optionalAttrs (repoPath != null) {
             declarations = map (
               decl:
               let
-                subpath = lib.removePrefix "/" (lib.removePrefix repoPath (toString decl));
-                subpathFile = if lib.strings.hasSuffix ".nix" subpath then subpath else "${subpath}/default.nix";
+                subpath = lib.removePrefix "${repoPath}/" (
+                  if lib.strings.hasSuffix ".nix" decl then decl else "${decl}/default.nix"
+                );
               in
-              if lib.hasPrefix "file://" (toString decl) || lib.hasPrefix "/nix/store" (toString decl) then
-                {
-                  url = "${repoLinkPrefix}/${subpathFile}";
-                  name = "${name}/${subpathFile}";
-                }
-              else
-                decl
+              {
+                name = subpath;
+              }
+              // lib.optionalAttrs (repoLinkPrefix != null) { url = "${repoLinkPrefix}/${subpath}"; }
             ) opt.declarations;
           };
+
       }
     ) { };
 }

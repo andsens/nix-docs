@@ -26,18 +26,18 @@
         };
         perSystem =
           { pkgs, system, ... }:
-          rec {
-            apps.docs.program = self.lib.docs.copyToRepo {
+          let
+            lib-docs = self.lib.docs.lib {
               inherit pkgs;
-              paths."docs/lib" = "${packages.lib-docs}/lib";
+              paths.lib = ./nix/lib;
             };
-            packages = {
-              lib-docs = self.lib.docs.lib {
-                inherit pkgs;
-                repoPath = toString self;
-                paths.lib = ./nix/lib;
-              };
+          in
+          {
+            apps.update-docs.program = self.lib.docs.updateRepo {
+              inherit pkgs;
+              paths."docs/lib" = "${lib-docs}/lib";
             };
+            packages.lib-docs = lib-docs;
           };
       }
     );
