@@ -72,8 +72,12 @@
       )}
     '';
   /**
-    Using `nixdoc` generate documentation for all annotated functions in the
-    files referenced through `paths`.
+    Using `nixdoc` generate documentation for all annotated functions in
+    the files referenced through `paths`.
+
+    Each `paths` value can be a directory (scanned recursively for `.nix`
+    files, each rendered to its own `<RelPath>/<file>.md`) or a single
+    `.nix` file (rendered to `<RelPath>.md` directly).
 
     # Arguments
 
@@ -92,6 +96,7 @@
     inputs.nix-docs.lib.docs.lib {
       inherit pkgs;
       paths.lib = ./nix/lib;
+      paths."modules/workload-macros" = ./nix/modules/workload-macros/lib.nix;
     }
     ```
   */
@@ -109,21 +114,34 @@
       runCommand "lib-docs" { } ''
         set -eo pipefail
         mkdir $out
-        compile() {
+        render() {
+          local file=$1 prefix=$2 category=$3 outpath=$4
+          mkdir -p "$(dirname "$outpath")"
+          ${lib.getExe nixdoc} --file "$file" \
+            --prefix "$prefix" --category "$category" --description "$category" | \
+            ${lib.getExe pkgs.gnused} 's/{#[^#]\+}//g' >"$outpath"
+        }
+        compile_dir() {
           local root=$1 dest=$2
           while read -r -d $'\0' file; do
-            name=''${file#"$root/"}
+            local name=''${file#"$root/"}
             name=''${name%'.nix'}
-            outpath=$out/$dest/$name.md
-            mkdir -p "$(dirname "$outpath")"
-            ${lib.getExe nixdoc} --file "$file" \
-              --prefix "$dest" --category "$name" --description "$name" | \
-              ${lib.getExe pkgs.gnused} 's/{#[^#]\+}//g' >"$outpath"
+            render "$file" "$dest" "$name" "$out/$dest/$name.md"
           done
+        }
+        compile_file() {
+          local file=$1 dest=$2 category
+          category=$(${lib.getExe pkgs.gnused} -E 's/^[0-9a-z]{32}-//' <<<"''${file##*/}")
+          category=''${category%'.nix'}
+          render "$file" "$dest" "$category" "$out/$dest.md"
         }
         ${lib.join "\n" (
           lib.mapAttrsToList (dest: path: ''
-            find ${path} -type f -name '*.nix' -print0 | compile ${path} ${lib.escapeShellArg dest}
+            if [[ -d ${path} ]]; then
+              find ${path} -type f -name '*.nix' -print0 | compile_dir ${path} ${lib.escapeShellArg dest}
+            else
+              compile_file ${path} ${lib.escapeShellArg dest}
+            fi
           '') paths
         )}
       ''
