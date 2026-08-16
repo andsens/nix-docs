@@ -1,29 +1,106 @@
 { lib, ... }:
 {
-  mkDocs =
+  copyToRepo =
+    {
+      pkgs,
+      paths,
+    }:
+    pkgs.writeShellScriptBin "build-docs" ''
+      set -eo pipefail
+      copy_dir() {
+        local root=$1 dest=$2
+        rm -rf "$dest"
+        while read -r -d $'\0' file; do
+          outpath=$dest/''${file#"$root/"}
+          mkdir -p "$(dirname "$outpath")"
+          cp "$file" "$outpath"
+        done
+      }
+      copy_file() {
+        local deriv=$1 outpath=$2
+        rm -f "$outpath"
+        mkdir -p "$(dirname "$outpath")"
+        cp "$deriv" "$outpath"
+      }
+      ${lib.join "\n" (
+        lib.mapAttrsToList (path: deriv: ''
+          if [[ -d ${deriv} ]]; then
+            find ${deriv} -type f -print0 | copy_dir ${deriv} ${lib.escapeShellArg path}
+          else
+            copy_file ${deriv} ${lib.escapeShellArg path}
+          fi
+        '') paths
+      )}
+    '';
+  lib =
+    {
+      repoPath,
+      paths,
+      pkgs,
+      anchorPrefix ? "function-library-",
+    }:
+    pkgs.callPackage (
+      {
+        runCommand,
+        nixdoc,
+        ...
+      }:
+      runCommand "lib-docs" { } ''
+        set -eo pipefail
+        mkdir $out
+        compile() {
+          local root=$1 dest=$2
+          while read -r -d $'\0' file; do
+            name=''${file#"$root/"}
+            name=''${name%'.nix'}
+            outpath=$out/$dest/$name.md
+            mkdir -p "$(dirname "$outpath")"
+            ${lib.getExe nixdoc} --file "$file" \
+              --prefix "$dest" --category "$name" --description "" \
+              --anchor-prefix ${lib.escapeShellArg anchorPrefix} >"$outpath"
+          done
+        }
+        ${lib.join "\n" (
+          lib.mapAttrsToList (dest: path: ''
+            find ${path} -type f -name '*.nix' -print0 | compile ${path} ${lib.escapeShellArg dest}
+          '') paths
+        )}
+      ''
+    ) { };
+  options =
     {
       name,
       repoPath,
       repoLinkPrefix,
-      options,
-      includeOptions ? opt: true,
+      modules,
+      optionRoot,
+      includeOption ? opt: true,
+      pkgs,
+      anchorPrefix ? "opt-",
     }:
-    {
-      runCommand,
-      nixosOptionsDoc,
-      stdenv,
-      nixos-render-docs,
-      ...
-    }:
-
-    let
-      optionsDoc = nixosOptionsDoc {
+    pkgs.callPackage (
+      {
+        runCommand,
+        nixosOptionsDoc,
+        stdenv,
+        nixos-render-docs,
+        ...
+      }:
+      let
+        options =
+          optionRoot
+            (lib.evalModules {
+              modules = lib.attrValues modules;
+            }).options;
+      in
+      nixosOptionsDoc {
         inherit options;
+        optionIdPrefix = anchorPrefix;
         transformOptions =
           opt:
           opt
           // {
-            visible = includeOptions opt;
+            visible = includeOption opt;
             declarations = map (
               decl:
               let
@@ -39,20 +116,6 @@
                 decl
             ) opt.declarations;
           };
-      };
-    in
-    stdenv.mkDerivation {
-      inherit name;
-      nativeBuildInputs = [ nixos-render-docs ];
-      dontUnpack = true;
-      buildPhase = ''
-        mkdir out
-        ln -s ${optionsDoc.optionsJSON}/share/doc/nixos/options.json out/options.json
-        ln -s ${optionsDoc.optionsCommonMark} out/options.md
-        ln -s ${optionsDoc.optionsAsciiDoc} out/options.adoc
-      '';
-      installPhase = ''
-        mv out "$out"
-      '';
-    };
+      }
+    ) { };
 }
