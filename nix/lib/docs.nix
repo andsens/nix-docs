@@ -23,7 +23,7 @@
         };
         options-docs = inputs.docs.lib.docs.options {
           inherit pkgs;
-          options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+          options = (lib.evalModules { modules = lib.attrValues self.nixosModules ++ [ { _module.check = false; }; }).options.kubetree;
           repoPath = toString self;
           repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
         };
@@ -158,7 +158,7 @@
     ```nix
     inputs.docs.lib.docs.options {
       inherit pkgs;
-      options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+      options = (lib.evalModules { modules = lib.attrValues self.nixosModules ++ [ { _module.check = false; }; }).options.kubetree;
       repoPath = toString self;
       repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
     }
