@@ -56,8 +56,9 @@
             outpath=$out/$dest/$name.md
             mkdir -p "$(dirname "$outpath")"
             ${lib.getExe nixdoc} --file "$file" \
-              --prefix "$dest" --category "$name" --description "" \
-              --anchor-prefix ${lib.escapeShellArg anchorPrefix} >"$outpath"
+              --prefix "$dest" --category "$name" --description "$name" \
+              --anchor-prefix ${lib.escapeShellArg anchorPrefix} | \
+              ${lib.getExe pkgs.gnused} 's/{#[^#]\+}//g' >"$outpath"
           done
         }
         ${lib.join "\n" (
