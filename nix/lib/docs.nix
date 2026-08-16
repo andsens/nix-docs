@@ -23,7 +23,7 @@
         };
         options-docs = inputs.docs.lib.docs.options {
           inherit pkgs;
-          options = (lib.evalModules { modules = lib.attrValues self.nixosModules ++ [ { _module.check = false; }; }).options.kubetree;
+          modules = lib.attrValues self.nixosModules;
           repoPath = toString self;
           repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
         };
@@ -129,22 +129,18 @@
       ''
     ) { };
   /**
-    Generate options documentation for NixOS modules.
+    Generate options documentation for the NixOS modules in `modules`.
+    Filters out any option not declared under `repoPath`.
 
     # Arguments
 
     `pkgs`: nixpkgs
 
-    `options`: Attrset of options to generate the documentation from
+    `repoPath`: Path to the root of the repository.
 
-    `repoPath`: Path to the root of the repository, transforms source paths into relative paths (*optional*)
+    `modules`: List of NixOS modules to evaluate and generate documentation for
 
-    `repoLinkPrefix`: URL prefix for creating source file links (*optional*, requires `repoPath` to be set)
-
-    `visible` (`Option -> Bool`): A predicate for filtering out unwanted options
-    (*optional*). Defaults to hiding options not declared under `repoPath`
-    when `repoPath` is set (useful for dropping options pulled in from other
-    flakes' modules), or to showing everything when `repoPath` is unset.
+    `repoLinkPrefix`: URL prefix for creating source file links (*optional*)
 
     # Output
 
@@ -158,7 +154,7 @@
     ```nix
     inputs.docs.lib.docs.options {
       inherit pkgs;
-      options = (lib.evalModules { modules = lib.attrValues self.nixosModules ++ [ { _module.check = false; }; }).options.kubetree;
+      modules = lib.attrValues self.nixosModules;
       repoPath = toString self;
       repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
     }
@@ -167,15 +163,9 @@
   options =
     {
       pkgs,
-      options,
-      repoPath ? null,
+      repoPath,
+      modules,
       repoLinkPrefix ? null,
-      visible ? (
-        if repoPath == null then
-          opt: true
-        else
-          opt: lib.any (decl: lib.hasPrefix repoPath decl) opt.declarations
-      ),
     }:
     pkgs.callPackage (
       {
@@ -186,14 +176,12 @@
         ...
       }:
       nixosOptionsDoc {
-        inherit options;
+        options = (lib.evalModules { modules = modules ++ [ { _module.check = false; } ]; }).options;
         transformOptions =
           opt:
           opt
           // {
-            visible = visible opt;
-          }
-          // lib.optionalAttrs (repoPath != null) {
+            visible = lib.any (decl: lib.hasPrefix repoPath decl) opt.declarations;
             declarations = map (
               decl:
               let

@@ -25,7 +25,7 @@ perSystem =
     };
     options-docs = inputs.docs.lib.docs.options {
       inherit pkgs;
-      options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+      modules = lib.attrValues self.nixosModules;
       repoPath = toString self;
       repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
     };
@@ -68,19 +68,18 @@ inputs.nix-docs.lib.docs.lib {
 
 ## `lib.docs.options` 
 
-Generate options documentation for NixOS modules.
+Generate options documentation for the NixOS modules in `modules`.
+Filters out any option not declared under `repoPath`.
 
 ### Arguments
 
 `pkgs`: nixpkgs
 
-`options`: Attrset of options to generate the documentation from
+`repoPath`: Path to the root of the repository.
 
-`repoPath`: Path to the root of the repository, transforms source paths into relative paths (*optional*)
+`modules`: List of NixOS modules to evaluate and generate documentation for
 
-`repoLinkPrefix`: URL prefix for creating source file links (*optional*, requires `repoPath` to be set)
-
-`visible` (`Option -> Bool`): A predicate for filtering out unwanted options (*optional*)
+`repoLinkPrefix`: URL prefix for creating source file links (*optional*)
 
 ### Output
 
@@ -94,7 +93,7 @@ All values being derivation files containing the documentation in the correspond
 ```nix
 inputs.docs.lib.docs.options {
   inherit pkgs;
-  options = (lib.evalModules { modules = lib.attrValues self.nixosModules; }).options.kubetree;
+  modules = lib.attrValues self.nixosModules;
   repoPath = toString self;
   repoLinkPrefix = "https://github.com/andsens/nix-kubetree/blob/main";
 }
