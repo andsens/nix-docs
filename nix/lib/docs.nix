@@ -141,7 +141,10 @@
 
     `repoLinkPrefix`: URL prefix for creating source file links (*optional*, requires `repoPath` to be set)
 
-    `visible` (`Option -> Bool`): A predicate for filtering out unwanted options (*optional*)
+    `visible` (`Option -> Bool`): A predicate for filtering out unwanted options
+    (*optional*). Defaults to hiding options not declared under `repoPath`
+    when `repoPath` is set (useful for dropping options pulled in from other
+    flakes' modules), or to showing everything when `repoPath` is unset.
 
     # Output
 
@@ -167,7 +170,12 @@
       options,
       repoPath ? null,
       repoLinkPrefix ? null,
-      visible ? opt: true,
+      visible ? (
+        if repoPath == null then
+          opt: true
+        else
+          opt: lib.any (decl: lib.hasPrefix repoPath decl) opt.declarations
+      ),
     }:
     pkgs.callPackage (
       {
