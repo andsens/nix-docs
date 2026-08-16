@@ -13,14 +13,14 @@
         while read -r -d $'\0' file; do
           outpath=$dest/''${file#"$root/"}
           mkdir -p "$(dirname "$outpath")"
-          cp "$file" "$outpath"
+          cp --no-preserve=all -L "$file" "$outpath"
         done
       }
       copy_file() {
         local deriv=$1 outpath=$2
         rm -f "$outpath"
         mkdir -p "$(dirname "$outpath")"
-        cp "$deriv" "$outpath"
+        cp --no-preserve=all -L "$deriv" "$outpath"
       }
       ${lib.join "\n" (
         lib.mapAttrsToList (path: deriv: ''
