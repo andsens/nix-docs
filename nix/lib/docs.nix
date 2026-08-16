@@ -176,7 +176,11 @@
         ...
       }:
       nixosOptionsDoc {
-        options = (lib.evalModules { modules = modules ++ [ { _module.check = false; } ]; }).options;
+        options =
+          (lib.evalModules {
+            modules = modules ++ [ { _module.check = false; } ];
+            specialArgs = { inherit pkgs; };
+          }).options;
         transformOptions =
           opt:
           opt
