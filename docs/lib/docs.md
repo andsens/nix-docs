@@ -43,8 +43,12 @@ Run with `nix run '.#update-docs'`
 
 ## `lib.docs.lib` 
 
-Using `nixdoc` generate documentation for all annotated functions in the
-files referenced through `paths`.
+Using `nixdoc` generate documentation for all annotated functions in
+the files referenced through `paths`.
+
+Each `paths` value can be a directory (scanned recursively for `.nix`
+files, each rendered to its own `<RelPath>/<file>.md`) or a single
+`.nix` file (rendered to `<RelPath>.md` directly).
 
 ### Arguments
 
@@ -63,6 +67,7 @@ with `RelPath` as the root directory.
 inputs.nix-docs.lib.docs.lib {
   inherit pkgs;
   paths.lib = ./nix/lib;
+  paths."modules/workload-macros" = ./nix/modules/workload-macros/lib.nix;
 }
 ```
 
