@@ -34,7 +34,7 @@ perSystem =
     apps.update-docs.program = inputs.nix-docs.lib.docs.updateRepo {
       inherit pkgs;
       paths."docs/lib" = "${lib-docs}/lib";
-      paths."docs/options.md" = options-docs.optionsCommonMark;
+      paths."docs/options.md" = options-docs;
     };
   };
 ```
@@ -60,6 +60,9 @@ files, each rendered to its own `<RelPath>/<file>.md`) or a single
 
 A derivation containing markdown docs structurally mirroring `RepoPath`
 with `RelPath` as the root directory.
+The derivation also has passthru options for the same docs in `json` format,
+and `nix` (an attrset of `{ [DotPath] :: JsonString }`, one entry per rendered
+file) — `commonMark` is also set.
 
 ### Example
 
@@ -86,11 +89,16 @@ Filters out any option not declared under `repoPath`.
 
 `repoLinkPrefix`: URL prefix for creating source file links (*optional*)
 
+`prefixGroups` (`{ [String] :: [String] }`): Attrset of `{ [GroupName] :: [OptionNamePrefix] }`.
+Generates one additional filtered docs derivation per group, containing only
+options whose name starts with one of the given prefixes (*optional*)
+
 ### Output
 
-The same as [`pkgs.nixosOptionsDoc`](https://github.com/NixOS/nixpkgs/blob/8c50a710ddca43d7a530fb805ad55bde8d0141c5/nixos/lib/make-options-doc/default.nix#L179-L247).
-An attrSet of `optionsAsciiDoc`, `optionsCommonMark`, and `optionsJSON`.
-All values being derivation files containing the documentation in the corresponding format.
+A derivation with the documentation in markdown format.
+The derivation also has passthru options for all other available format, which are "asciiDoc", and "json" ("commonMark" is also set).
+When `prefixGroups` is set, `passthru.prefixGroups.<GroupName>` provides the same formats
+(plus `prefixes`, the prefixes used to filter that group) for each group.
 
 ### Example
 
