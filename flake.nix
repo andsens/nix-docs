@@ -22,7 +22,9 @@
       {
         systems = import systems;
         flake = {
-          lib.docs = import ./nix/lib/docs.nix { inherit lib; };
+          lib.docs = import ./nix/lib/generate.nix { inherit lib; };
+          lib.mkdocs = import ./nix/lib/mkdocs.nix { inherit lib; };
+          lib.utils = import ./nix/lib/util.nix { inherit lib; };
         };
         perSystem =
           { pkgs, system, ... }:
