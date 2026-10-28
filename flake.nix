@@ -35,7 +35,7 @@
             };
           in
           {
-            apps.update-docs.program = self.lib.docs.updateRepo {
+            apps.update-docs.program = self.lib.utils.updateRepo {
               inherit pkgs;
               paths."docs/lib" = "${lib-docs}/lib";
             };
