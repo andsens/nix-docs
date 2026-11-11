@@ -55,8 +55,16 @@ rec {
         prefixName: splitDocs:
         writeText "${prefixName}.md" ("# ${prefixName}\n" + (buildCommonMarkOptionsDoc splitDocs))
       ) options-docs.prefixGroups;
+      # options/ gets a page of its own, linking the groups
+      splitOptionsIndex = writeText "index.md" (
+        "# Options\n\n"
+        + lib.concatMapStrings (prefixName: "- [${prefixName}](${prefixName}.md)\n") (
+          lib.attrNames splitOptionsFiles
+        )
+      );
       splitOptionsCmds = [
         "mkdir options"
+        "ln -s ${splitOptionsIndex} options/index.md"
       ]
       ++ lib.mapAttrsToList (
         prefixName: file: "ln -s ${file} options/${prefixName}.md"
