@@ -1,5 +1,60 @@
 { lib, ... }:
+let
+  esc = lib.escapeXML;
+  # The text of a `literalExpression`, `literalMD` or plain default/example, null when there is none
+  literalText =
+    v:
+    if v == null then
+      null
+    else if lib.isAttrs v && v ? _type && v ? text then
+      v.text
+    else
+      lib.generators.toPretty { } v;
+  # One line for a table cell: the first line, cut at `max` characters
+  oneLine =
+    max: text:
+    let
+      lines = lib.splitString "\n" text;
+      first = builtins.head lines;
+      cut = if builtins.stringLength first > max then builtins.substring 0 max first else first;
+    in
+    if cut != text then "${cut}…" else text;
+  # The first paragraph of a description, on one line
+  summary =
+    description:
+    let
+      paragraph = builtins.head (lib.splitString "\n\n" (lib.trim description));
+    in
+    lib.concatStringsSep " " (map lib.trim (lib.splitString "\n" paragraph));
+  # A block of Nix inside the card. md_in_html needs the fence flush left, and `markdown` on every level from the
+  # table down to the cell.
+  nixBlock = text: "\n```nix\n${text}\n```\n";
+  hasPrefixPath = prefix: name: prefix == "" || name == prefix || lib.hasPrefix "${prefix}." name;
+in
 rec {
+  /**
+    The CSS and JavaScript of the option tables, as a directory to link into the `docs_dir` of a site
+    (`nix-docs/options.css`, `nix-docs/options.js`).
+  */
+  assets = ./assets;
+
+  /**
+    mkdocs settings the option pages need: the markdown extensions and the assets, which are expected at `nix-docs/`
+    in the `docs_dir` (see `assets`). Merge them into the site's `mkdocs.yml`.
+  */
+  settings = {
+    markdown_extensions = [
+      "md_in_html"
+      "attr_list"
+      "tables"
+      "admonition"
+      "pymdownx.superfences"
+      "pymdownx.highlight"
+    ];
+    extra_css = [ "nix-docs/options.css" ];
+    extra_javascript = [ "nix-docs/options.js" ];
+  };
+
   manual =
     {
       pkgs,
@@ -17,30 +72,99 @@ rec {
         runHook postInstall
       '';
     };
-  buildCommonMarkOptionsDoc =
-    { prefixes, nix, ... }:
-    lib.join "\n" (
-      map (
+
+  /**
+    Markdown for the options under `prefixes`, a section per prefix with a table of its options. Each option is a
+    row with an anchor named after the option, and a second row below it, hidden until the first is clicked, holding
+    the full description, default, example and where it is declared.
+
+    # Arguments
+
+    `prefixes` (`[String]`): option name prefixes, one section each; `""` is one section of all options, without a
+    heading.
+
+    `nix`: the options, as `optionsNix` of `nixosOptionsDoc`.
+
+    `values` (`{ [OptionName] :: { value; changed ? Bool } }`, *optional*): the current value of each option, shown in
+    a Value column; `changed` marks values that differ from the default. A section whose `<prefix>.enable` has a value
+    says whether it is enabled. Values are rendered with `lib.generators.toPretty`.
+  */
+  buildOptionsMarkdown =
+    {
+      prefixes,
+      nix,
+      values ? null,
+      ...
+    }:
+    let
+      withValues = values != null;
+      columns = if withValues then 5 else 4;
+      row =
+        prefix: name: opt:
+        let
+          shortName = if prefix == "" then name else lib.removePrefix "." (lib.removePrefix prefix name);
+          type = "${opt.type}${lib.optionalString (opt.readOnly or false) " (read-only)"}";
+          default = literalText (opt.default or null);
+          example = literalText (opt.example or null);
+          description = opt.description or "";
+          value = if withValues then values.${name} or null else null;
+          valueText = if value == null then null else lib.generators.toPretty { } value.value;
+          declarations = opt.declarations or [ ];
+          declLink = d: if d ? url then "[`${d.name}`](${d.url})" else "`${d.name}`";
+          cell = text: if text == null then "<td>—</td>" else "<td><code>${esc (oneLine 40 text)}</code></td>";
+        in
+        lib.concatStrings [
+          ''<tr class="nd-option" id="${esc name}" tabindex="0" aria-expanded="false" markdown="1">''
+          ''<td><a class="nd-name" href="#${esc name}"><code>${lib.replaceStrings [ "." ] [ ".<wbr>" ] (esc shortName)}</code></a></td>''
+          "<td>${esc type}</td>"
+          (cell default)
+          (lib.optionalString withValues (
+            if valueText == null then
+              ''<td class="nd-value">—</td>''
+            else
+              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"><code>${esc (oneLine 40 valueText)}</code></td>''
+          ))
+          ''<td markdown="span">${summary description}</td>''
+          "</tr>\n"
+          ''<tr class="nd-card" hidden markdown="1"><td colspan="${toString columns}" markdown="block">''
+          "\n\n"
+          "`${name}`\n\n"
+          (if description == "" then "*No description.*\n" else "${lib.trim description}\n")
+          (lib.optionalString (valueText != null) (
+            "\n**Value**${lib.optionalString (value.changed or false) " (changed)"}\n${nixBlock valueText}"
+          ))
+          (lib.optionalString (default != null) "\n**Default**\n${nixBlock default}")
+          (lib.optionalString (example != null) "\n**Example**\n${nixBlock example}")
+          (lib.optionalString (declarations != [ ]) (
+            "\n**Declared in** ${lib.concatMapStringsSep ", " declLink declarations}\n"
+          ))
+          "\n</td></tr>\n"
+        ];
+      section =
         prefix:
         let
-          rows = lib.mapAttrsToList (
-            name: opt:
-            let
-              shortName = (lib.removePrefix "." (lib.removePrefix prefix name));
-              type = "${opt.type}${if opt.readOnly then " (read-only))" else ""}";
-              description = opt.description;
-            in
-            "| ${shortName} | ${type} | ${description} |"
-          ) (lib.filterAttrs (name: opt: lib.hasPrefix prefix name) nix);
+          opts = lib.filterAttrs (name: _: hasPrefixPath prefix name) nix;
+          enable = if withValues && prefix != "" then values."${prefix}.enable" or null else null;
+          badge =
+            if enable == null then
+              ""
+            else if enable.value == true then
+              "\n\n<span class=\"nd-badge nd-enabled\">enabled</span>\n"
+            else
+              "\n\n<span class=\"nd-badge nd-disabled\">disabled</span>\n";
         in
-        ''
-          ## ${prefix}
-          | Name | Type | Description |
-          |------|------|-------------|
-          ${lib.join "\n" rows}
-        ''
-      ) prefixes
-    );
+        lib.concatStrings [
+          (lib.optionalString (prefix != "") "## ${prefix}${badge}\n\n")
+          ''<table class="nd-options${lib.optionalString withValues " nd-with-values"}" markdown="1">''
+          "\n<thead><tr><th>Name</th><th>Type</th><th>Default</th>"
+          (lib.optionalString withValues "<th>Value</th>")
+          "<th>Description</th></tr></thead>\n<tbody markdown=\"1\">\n"
+          (lib.concatStrings (lib.mapAttrsToList (row prefix) opts))
+          "</tbody>\n</table>\n"
+        ];
+    in
+    lib.concatMapStringsSep "\n" section prefixes;
+
   buildModuleDocsDir =
     {
       stdenvNoCC,
@@ -48,12 +172,19 @@ rec {
       options-docs ? null,
       lib-docs ? null,
       manual-docs ? null,
+      values ? null,
       ...
     }:
     let
       splitOptionsFiles = lib.mapAttrs (
         prefixName: splitDocs:
-        writeText "${prefixName}.md" ("# ${prefixName}\n" + (buildCommonMarkOptionsDoc splitDocs))
+        writeText "${prefixName}.md" (
+          "# ${prefixName}\n\n"
+          + buildOptionsMarkdown {
+            inherit (splitDocs) prefixes nix;
+            inherit values;
+          }
+        )
       ) options-docs.prefixGroups;
       # options/ gets a page of its own, linking the groups
       splitOptionsIndex = writeText "index.md" (
@@ -69,7 +200,15 @@ rec {
       ++ lib.mapAttrsToList (
         prefixName: file: "ln -s ${file} options/${prefixName}.md"
       ) splitOptionsFiles;
-      optionsCmds = [ "ln -s ${options-docs.commonMark} options.md" ];
+      optionsFile = writeText "options.md" (
+        "# Options\n\n"
+        + buildOptionsMarkdown {
+          prefixes = [ "" ];
+          inherit (options-docs) nix;
+          inherit values;
+        }
+      );
+      optionsCmds = [ "ln -s ${optionsFile} options.md" ];
       libsCmds = [
         ''
           for file in "${lib-docs.commonMark}"/**; do

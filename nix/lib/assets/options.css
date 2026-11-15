@@ -1,0 +1,114 @@
+/* Option tables. Material's colour variables where the theme has them, plain fallbacks elsewhere. */
+/* Material styles only tables without a class, so these carry their own table look. Fixed layout and set column
+   widths keep the columns aligned from one section to the next. */
+.nd-options {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.64rem;
+  line-height: 1.5;
+  border: 0.05rem solid var(--md-typeset-table-color, rgba(0, 0, 0, 0.12));
+  border-radius: 0.1rem;
+}
+.nd-options th,
+.nd-options td {
+  padding: 0.6em 0.8em;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.nd-options th {
+  font-weight: 700;
+  background: var(--md-default-fg-color--lightest, rgba(0, 0, 0, 0.07));
+}
+.nd-options tr.nd-option td {
+  border-top: 0.05rem solid var(--md-typeset-table-color, rgba(0, 0, 0, 0.12));
+}
+.nd-options th:nth-child(1) {
+  width: 24%;
+}
+.nd-options th:nth-child(2) {
+  width: 16%;
+}
+.nd-options th:nth-child(3) {
+  width: 16%;
+}
+.nd-options.nd-with-values th:nth-child(1) {
+  width: 22%;
+}
+.nd-options.nd-with-values th:nth-child(2),
+.nd-options.nd-with-values th:nth-child(3) {
+  width: 14%;
+}
+.nd-options.nd-with-values th:nth-child(4) {
+  width: 16%;
+}
+.nd-options code {
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+/* Names break after their dots (<wbr>), mid-word only when one part is wider than the column */
+.nd-options a.nd-name code {
+  overflow-wrap: break-word;
+}
+/* Below Material's header (and tabs) when an anchor scrolls a row into view */
+.nd-options tr.nd-option {
+  scroll-margin-top: 6rem;
+}
+.nd-options tr.nd-option {
+  cursor: pointer;
+}
+.nd-options tr.nd-option:hover,
+.nd-options tr.nd-option[aria-expanded="true"] {
+  background: var(--md-accent-fg-color--transparent, rgba(68, 138, 255, 0.1));
+}
+.nd-options tr.nd-option:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color, #448aff);
+  outline-offset: -2px;
+}
+.nd-options tr.nd-option td:first-child {
+  position: relative;
+  padding-left: 1.8em;
+}
+.nd-options tr.nd-option td:first-child::before {
+  content: "▸";
+  position: absolute;
+  left: 0.6em;
+  color: var(--md-default-fg-color--light, #888);
+  transition: transform 0.1s;
+}
+.nd-options tr.nd-option[aria-expanded="true"] td:first-child::before {
+  transform: rotate(90deg);
+}
+.nd-options a.nd-name {
+  color: inherit;
+}
+.nd-options tr.nd-card > td {
+  background: var(--md-code-bg-color, #f5f5f5);
+  border-left: 3px solid var(--md-accent-fg-color, #448aff);
+  padding: 0.5em 1em 1em;
+}
+.nd-options tr.nd-card pre {
+  margin: 0.3em 0 0.8em;
+}
+.nd-options td.nd-value.nd-changed code {
+  color: var(--md-accent-fg-color, #448aff);
+  font-weight: 600;
+}
+.nd-badge {
+  display: inline-block;
+  padding: 0.1em 0.6em;
+  border-radius: 1em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.nd-badge.nd-enabled {
+  background: #2e7d32;
+  color: #fff;
+}
+.nd-badge.nd-disabled {
+  background: var(--md-default-fg-color--lightest, #ddd);
+  color: var(--md-default-fg-color, #333);
+}

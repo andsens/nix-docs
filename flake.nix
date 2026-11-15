@@ -40,6 +40,10 @@
               paths."docs/lib" = "${lib-docs}/lib";
             };
             packages.lib-docs = lib-docs;
+            checks = import ./nix/tests {
+              inherit pkgs lib;
+              docsLib = self.lib;
+            };
           };
       }
     );
