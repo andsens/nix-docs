@@ -77,6 +77,10 @@ def main(plain_dir, values_dir):
         page.goto(f"{plain}/options/beta/")
         expect(row(page, "fixture.beta.peers.<name>.address")).to_have_count(1)
 
+        # An option named like its section shows its full name
+        page.goto(f"{plain}/options/gamma/")
+        expect(row(page, "fixture.gamma").locator("a.nd-name")).to_have_text("fixture.gamma")
+
         # With values: the Value column, changed values marked, the enable badge per section
         page.goto(f"{values}/options/alpha/")
         expect(page.locator("table.nd-options th", has_text="Value")).to_have_count(1)

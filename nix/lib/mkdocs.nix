@@ -102,7 +102,8 @@ rec {
       row =
         prefix: name: opt:
         let
-          shortName = if prefix == "" then name else lib.removePrefix "." (lib.removePrefix prefix name);
+          # The option named like its section (`homelab.kubernetes` under `homelab.kubernetes`) keeps its full name
+          shortName = if prefix == "" || name == prefix then name else lib.removePrefix "${prefix}." name;
           type = "${opt.type}${lib.optionalString (opt.readOnly or false) " (read-only)"}";
           default = literalText (opt.default or null);
           example = literalText (opt.example or null);

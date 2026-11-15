@@ -34,6 +34,12 @@
         defaultText = lib.literalExpression "config.fixture.alpha.name + \"-computed\"";
       };
     };
+    # An option named like its section
+    gamma = lib.mkOption {
+      description = "An option whose name is the prefix of its group.";
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+    };
     beta = {
       enable = lib.mkEnableOption "beta";
       peers = lib.mkOption {
