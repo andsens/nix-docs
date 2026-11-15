@@ -34,18 +34,18 @@
 .nd-options th:nth-child(3) {
   width: 16%;
 }
-/* With values the Value column gets the most room after the description: a path or a name should fit by its parts */
+/* With values: cut cells (24 characters) need less room than names and types */
 .nd-options.nd-with-values th:nth-child(1) {
   width: 22%;
 }
 .nd-options.nd-with-values th:nth-child(2) {
-  width: 9%;
+  width: 12%;
 }
 .nd-options.nd-with-values th:nth-child(3) {
-  width: 17%;
+  width: 16%;
 }
 .nd-options.nd-with-values th:nth-child(4) {
-  width: 24%;
+  width: 20%;
 }
 /* Names and values break at their <wbr> points (dots, slashes, dashes, closing braces), mid-word only when one part
    is wider than the column */

@@ -32,7 +32,7 @@
         default = "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it";
       };
       longText = lib.mkOption {
-        description = "A long value with whitespace.";
+        description = "A long description that goes on past the cut, with `some code spanning the cut point` in it. And a second sentence.";
         type = lib.types.str;
         default = "a default with spaces that is longer than forty characters";
       };
