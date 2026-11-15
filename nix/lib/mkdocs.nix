@@ -10,17 +10,25 @@ let
       v.text
     else
       lib.generators.toPretty { } v;
-  # One line for a table cell: the first line, cut at `max` characters when it has whitespace to break at. A single
-  # token (a path, a URL, a name) stays whole and wraps in the cell.
+  # One line for a table cell: the whole text with its whitespace runs (newlines and indentation included) as single
+  # spaces, cut after the last word that fits in `max` characters, never inside a word. The first two words stay
+  # whatever their length, so a long path or name wraps in the cell rather than leaving `[` alone, and a rest of
+  # three characters or fewer stays too.
   oneLine =
     max: text:
     let
-      lines = lib.splitString "\n" text;
-      first = builtins.head lines;
-      hasSpace = builtins.match ".*[[:space:]].*" first != null;
-      cut = if hasSpace && builtins.stringLength first > max then builtins.substring 0 max first else first;
+      words = lib.filter (w: lib.isString w && w != "") (builtins.split "[[:space:]]+" text);
+      n = builtins.length words;
+      upTo = k: lib.concatStringsSep " " (lib.take k words);
+      # The most words that fit, at least two
+      fitting = lib.max (lib.min 2 n) (
+        lib.foldl' (k: i: if builtins.stringLength (upTo i) <= max then i else k) 0 (lib.range 1 n)
+      );
+      # A short rest (a closing bracket) goes in rather than leaving an ellipsis for it
+      rest = builtins.stringLength (lib.concatStringsSep " " (lib.drop fitting words));
+      k = if rest <= 3 then n else fitting;
     in
-    if cut != text then "${cut}…" else text;
+    if k == n then upTo n else "${upTo k} …";
   # The first paragraph of a description, on one line
   summary =
     description:
@@ -112,6 +120,8 @@ rec {
           description = opt.description or "";
           value = if withValues then values.${name} or null else null;
           valueText = if value == null then null else lib.generators.toPretty { } value.value;
+          # The cell gets the value on one line; the card keeps it laid out
+          valueLine = if value == null then null else lib.generators.toPretty { multiline = false; } value.value;
           declarations = opt.declarations or [ ];
           declLink = d: if d ? url then "[`${d.name}`](${d.url})" else "`${d.name}`";
           cell = text: if text == null then "<td>—</td>" else "<td><code>${esc (oneLine 40 text)}</code></td>";
@@ -125,7 +135,7 @@ rec {
             if valueText == null then
               ''<td class="nd-value">—</td>''
             else
-              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"><code>${esc (oneLine 40 valueText)}</code></td>''
+              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"><code>${esc (oneLine 40 valueLine)}</code></td>''
           ))
           ''<td markdown="span">${summary description}</td>''
           "</tr>\n"

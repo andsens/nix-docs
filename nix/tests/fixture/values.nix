@@ -14,6 +14,9 @@
     };
     changed = true;
   };
+  "fixture.alpha.path" = {
+    value = [ "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it" ];
+  };
   "fixture.beta.enable" = {
     value = false;
   };
