@@ -82,7 +82,7 @@ def main(plain_dir, values_dir):
         expect(row(page, "fixture.alpha.path").locator("td").nth(2)).to_have_text(
             '"/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it"'
         )
-        expect(row(page, "fixture.alpha.computed").locator("td").nth(2)).to_contain_text("…")
+        expect(row(page, "fixture.alpha.longText").locator("td").nth(2)).to_have_text('"a default with spaces that is longer th…')
 
         # An option named like its section shows its full name
         page.goto(f"{plain}/options/gamma/")

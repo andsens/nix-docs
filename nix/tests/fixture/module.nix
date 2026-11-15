@@ -31,6 +31,11 @@
         type = lib.types.str;
         default = "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it";
       };
+      longText = lib.mkOption {
+        description = "A long value with whitespace.";
+        type = lib.types.str;
+        default = "a default with spaces that is longer than forty characters";
+      };
       computed = lib.mkOption {
         description = "A read-only option with a literal default.";
         type = lib.types.str;
