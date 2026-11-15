@@ -236,16 +236,9 @@ rec {
           }
         )
       ) options-docs.prefixGroups;
-      # options/ gets a page of its own, linking the groups
-      splitOptionsIndex = writeText "index.md" (
-        "# Options\n\n"
-        + lib.concatMapStrings (prefixName: "- [${prefixName}](${prefixName}.md)\n") (
-          lib.attrNames splitOptionsFiles
-        )
-      );
+      # The groups' pages, and no index page: the navigation lists them under the section
       splitOptionsCmds = [
         "mkdir options"
-        "ln -s ${splitOptionsIndex} options/index.md"
       ]
       ++ lib.mapAttrsToList (
         prefixName: file: "ln -s ${file} options/${prefixName}.md"
