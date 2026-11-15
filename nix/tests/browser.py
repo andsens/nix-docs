@@ -63,6 +63,7 @@ def main(plain_dir, values_dir):
         # No Value column and no badge without values
         expect(page.locator("table.nd-options th", has_text="Value")).to_have_count(0)
         expect(page.locator(".nd-badge")).to_have_count(0)
+        expect(page.locator(".nd-legend")).to_have_count(0)
 
         # An anchor in the URL opens its card on load
         page.goto(f"{plain}/options/alpha/#fixture.alpha.settings")
@@ -98,11 +99,14 @@ def main(plain_dir, values_dir):
         expect(row(page, "fixture.alpha.name").locator("td.nd-value")).to_have_text('"alpha"')
         expect(row(page, "fixture.alpha.name").locator("td.nd-changed")).to_have_count(0)
         expect(row(page, "fixture.alpha.settings").locator("td.nd-value")).to_have_text("{ first = 1; second = 5; }")
+        # A long token gets break points at its parts
+        assert "/<wbr>" in row(page, "fixture.alpha.path").locator("td").nth(2).inner_html()
         # A list whose one element is long shows it, not a bracket alone
         expect(row(page, "fixture.alpha.path").locator("td.nd-value")).to_have_text(
             '[ "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it" ]'
         )
         expect(page.locator(".nd-badge.nd-enabled")).to_have_count(1)
+        expect(page.locator(".nd-legend")).to_have_count(1)
         row(page, "fixture.alpha.settings").locator("td").nth(1).click()
         expect(card(page, "fixture.alpha.settings")).to_contain_text("Value (changed)")
         page.goto(f"{values}/options/beta/")

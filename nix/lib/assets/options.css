@@ -16,7 +16,7 @@
   padding: 0.6em 0.8em;
   vertical-align: top;
   text-align: left;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .nd-options th {
   font-weight: 700;
@@ -34,22 +34,23 @@
 .nd-options th:nth-child(3) {
   width: 16%;
 }
+/* With values the Value column gets the most room after the description: a path or a name should fit by its parts */
 .nd-options.nd-with-values th:nth-child(1) {
   width: 22%;
 }
-.nd-options.nd-with-values th:nth-child(2),
+.nd-options.nd-with-values th:nth-child(2) {
+  width: 9%;
+}
 .nd-options.nd-with-values th:nth-child(3) {
-  width: 14%;
+  width: 17%;
 }
 .nd-options.nd-with-values th:nth-child(4) {
-  width: 16%;
+  width: 24%;
 }
+/* Names and values break at their <wbr> points (dots, slashes, dashes, closing braces), mid-word only when one part
+   is wider than the column */
 .nd-options code {
   font-size: 0.95em;
-  overflow-wrap: anywhere;
-}
-/* Names break after their dots (<wbr>), mid-word only when one part is wider than the column */
-.nd-options a.nd-name code {
   overflow-wrap: break-word;
 }
 /* Below Material's header (and tabs) when an anchor scrolls a row into view */
@@ -101,6 +102,11 @@
 .nd-options tr.nd-card pre > code {
   padding: 0.3em 0.6em;
 }
+.nd-legend {
+  font-size: 0.64rem;
+  color: var(--md-default-fg-color--light, #666);
+}
+.nd-legend .nd-changed-sample,
 .nd-options td.nd-value.nd-changed code {
   color: var(--md-accent-fg-color, #448aff);
   font-weight: 600;

@@ -39,6 +39,8 @@ let
   # A block of Nix inside the card. md_in_html needs the fence flush left, and `markdown` on every level from the
   # table down to the cell.
   nixBlock = text: "\n```nix\n${text}\n```\n";
+  # A cell value, escaped, with break points after `.`, `/`, `-` and `}`, so a long token wraps at its parts
+  breakable = text: lib.replaceStrings [ "." "/" "-" "}" ] [ ".<wbr>" "/<wbr>" "-<wbr>" "}<wbr>" ] (esc text);
   hasPrefixPath = prefix: name: prefix == "" || name == prefix || lib.hasPrefix "${prefix}." name;
 in
 rec {
@@ -124,7 +126,7 @@ rec {
           valueLine = if value == null then null else lib.generators.toPretty { multiline = false; } value.value;
           declarations = opt.declarations or [ ];
           declLink = d: if d ? url then "[`${d.name}`](${d.url})" else "`${d.name}`";
-          cell = text: if text == null then "<td>—</td>" else "<td><code>${esc (oneLine 40 text)}</code></td>";
+          cell = text: if text == null then "<td>—</td>" else "<td><code>${breakable (oneLine 40 text)}</code></td>";
         in
         lib.concatStrings [
           ''<tr class="nd-option" id="${esc name}" tabindex="0" aria-expanded="false" markdown="1">''
@@ -135,7 +137,7 @@ rec {
             if valueText == null then
               ''<td class="nd-value">—</td>''
             else
-              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"><code>${esc (oneLine 40 valueLine)}</code></td>''
+              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"${lib.optionalString (value.changed or false) " title=\"Set in this system's configuration\""}><code>${breakable (oneLine 40 valueLine)}</code></td>''
           ))
           ''<td markdown="span">${summary description}</td>''
           "</tr>\n"
@@ -175,8 +177,13 @@ rec {
           (lib.concatStrings (lib.mapAttrsToList (row prefix) opts))
           "</tbody>\n</table>\n"
         ];
+      legend = lib.optionalString withValues ''
+        <p class="nd-legend">Value: what this system has. <code class="nd-changed-sample">highlighted</code> where its
+        configuration sets the option; the others are at their default.</p>
+
+      '';
     in
-    lib.concatMapStringsSep "\n" section prefixes;
+    legend + lib.concatMapStringsSep "\n" section prefixes;
 
   buildModuleDocsDir =
     {
