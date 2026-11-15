@@ -14,6 +14,7 @@ let
     prefixGroups = {
       alpha = [ "fixture.alpha" ];
       beta = [ "fixture.beta" ];
+      gamma = [ "fixture.gamma" ];
     };
   };
   docsDir =
