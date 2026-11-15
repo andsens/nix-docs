@@ -77,6 +77,13 @@ def main(plain_dir, values_dir):
         page.goto(f"{plain}/options/beta/")
         expect(row(page, "fixture.beta.peers.<name>.address")).to_have_count(1)
 
+        # A long value without whitespace stays whole; one with whitespace is cut
+        page.goto(f"{plain}/options/alpha/")
+        expect(row(page, "fixture.alpha.path").locator("td").nth(2)).to_have_text(
+            '"/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it"'
+        )
+        expect(row(page, "fixture.alpha.computed").locator("td").nth(2)).to_contain_text("…")
+
         # An option named like its section shows its full name
         page.goto(f"{plain}/options/gamma/")
         expect(row(page, "fixture.gamma").locator("a.nd-name")).to_have_text("fixture.gamma")

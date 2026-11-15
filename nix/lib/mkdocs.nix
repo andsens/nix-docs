@@ -10,13 +10,15 @@ let
       v.text
     else
       lib.generators.toPretty { } v;
-  # One line for a table cell: the first line, cut at `max` characters
+  # One line for a table cell: the first line, cut at `max` characters when it has whitespace to break at. A single
+  # token (a path, a URL, a name) stays whole and wraps in the cell.
   oneLine =
     max: text:
     let
       lines = lib.splitString "\n" text;
       first = builtins.head lines;
-      cut = if builtins.stringLength first > max then builtins.substring 0 max first else first;
+      hasSpace = builtins.match ".*[[:space:]].*" first != null;
+      cut = if hasSpace && builtins.stringLength first > max then builtins.substring 0 max first else first;
     in
     if cut != text then "${cut}…" else text;
   # The first paragraph of a description, on one line

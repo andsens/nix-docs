@@ -26,6 +26,11 @@
           third = 3;
         };
       };
+      path = lib.mkOption {
+        description = "A long value without whitespace.";
+        type = lib.types.str;
+        default = "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it";
+      };
       computed = lib.mkOption {
         description = "A read-only option with a literal default.";
         type = lib.types.str;
