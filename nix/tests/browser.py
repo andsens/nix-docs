@@ -82,7 +82,10 @@ def main(plain_dir, values_dir):
         expect(row(page, "fixture.alpha.path").locator("td").nth(2)).to_have_text(
             '"/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it"'
         )
-        expect(row(page, "fixture.alpha.longText").locator("td").nth(2)).to_have_text('"a default with spaces that is longer th…')
+        expect(row(page, "fixture.alpha.longText").locator("td").nth(2)).to_have_text('"a default with spaces that is longer …')
+
+        # A layout-spanning default sits on one line in its cell, whole when it fits
+        expect(row(page, "fixture.alpha.settings").locator("td").nth(2)).to_have_text("{ first = 1; second = 2; third = 3; }")
 
         # An option named like its section shows its full name
         page.goto(f"{plain}/options/gamma/")
@@ -94,6 +97,11 @@ def main(plain_dir, values_dir):
         expect(row(page, "fixture.alpha.enable").locator("td.nd-value.nd-changed")).to_have_count(1)
         expect(row(page, "fixture.alpha.name").locator("td.nd-value")).to_have_text('"alpha"')
         expect(row(page, "fixture.alpha.name").locator("td.nd-changed")).to_have_count(0)
+        expect(row(page, "fixture.alpha.settings").locator("td.nd-value")).to_have_text("{ first = 1; second = 5; }")
+        # A list whose one element is long shows it, not a bracket alone
+        expect(row(page, "fixture.alpha.path").locator("td.nd-value")).to_have_text(
+            '[ "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it" ]'
+        )
         expect(page.locator(".nd-badge.nd-enabled")).to_have_count(1)
         row(page, "fixture.alpha.settings").locator("td").nth(1).click()
         expect(card(page, "fixture.alpha.settings")).to_contain_text("Value (changed)")
