@@ -56,9 +56,10 @@ def main(plain_dir, values_dir):
         page.keyboard.press("Enter")
         expect(card(page, name)).to_be_visible()
 
-        # The pipe in the description stays in its cell; the summary row has only the first paragraph
-        expect(row(page, name)).to_contain_text("A pipe | must not break the table.")
-        expect(row(page, name)).not_to_contain_text("A second paragraph")
+        # The summary row has only the first sentence; the card has the rest, the pipe included
+        expect(row(page, name).locator("td").nth(3)).to_have_text("Name of the alpha instance.")
+        expect(row(page, name)).not_to_contain_text("A pipe")
+        expect(card(page, name)).to_contain_text("A pipe | must not break the table.")
 
         # No Value column and no badge without values
         expect(page.locator("table.nd-options th", has_text="Value")).to_have_count(0)
@@ -78,15 +79,20 @@ def main(plain_dir, values_dir):
         page.goto(f"{plain}/options/beta/")
         expect(row(page, "fixture.beta.peers.<name>.address")).to_have_count(1)
 
-        # A long value without whitespace stays whole; one with whitespace is cut
+        # Every value past 24 characters is cut at a break point and ends in an ellipsis, with or without whitespace
         page.goto(f"{plain}/options/alpha/")
-        expect(row(page, "fixture.alpha.path").locator("td").nth(2)).to_have_text(
-            '"/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it"'
+        expect(row(page, "fixture.alpha.path").locator("td").nth(2)).to_have_text('"/var/lib/a-rather-long-…')
+        expect(row(page, "fixture.alpha.longText").locator("td").nth(2)).to_have_text('"a default with spaces…')
+        # A long first sentence is cut at a word, never inside a code span
+        expect(row(page, "fixture.alpha.longText").locator("td").nth(3)).to_have_text(
+            "A long description that goes on past the cut, with …"
         )
-        expect(row(page, "fixture.alpha.longText").locator("td").nth(2)).to_have_text('"a default with spaces that is longer …')
+        # The card has it whole
+        row(page, "fixture.alpha.path").locator("td").nth(1).click()
+        expect(card(page, "fixture.alpha.path")).to_contain_text("/without-any-whitespace/in-it")
 
-        # A layout-spanning default sits on one line in its cell, whole when it fits
-        expect(row(page, "fixture.alpha.settings").locator("td").nth(2)).to_have_text("{ first = 1; second = 2; third = 3; }")
+        # A layout-spanning default sits on one line in its cell
+        expect(row(page, "fixture.alpha.settings").locator("td").nth(2)).to_have_text('{ first = 1; second =…')
 
         # An option named like its section shows its full name
         page.goto(f"{plain}/options/gamma/")
@@ -101,10 +107,7 @@ def main(plain_dir, values_dir):
         expect(row(page, "fixture.alpha.settings").locator("td.nd-value")).to_have_text("{ first = 1; second = 5; }")
         # A long token gets break points at its parts
         assert "/<wbr>" in row(page, "fixture.alpha.path").locator("td").nth(2).inner_html()
-        # A list whose one element is long shows it, not a bracket alone
-        expect(row(page, "fixture.alpha.path").locator("td.nd-value")).to_have_text(
-            '[ "/var/lib/a-rather-long-directory-name/without-any-whitespace/in-it" ]'
-        )
+        expect(row(page, "fixture.alpha.path").locator("td.nd-value")).to_have_text('[ "/var/lib/a-rather-…')
         expect(page.locator(".nd-badge.nd-enabled")).to_have_count(1)
         expect(page.locator(".nd-legend")).to_have_count(1)
         row(page, "fixture.alpha.settings").locator("td").nth(1).click()

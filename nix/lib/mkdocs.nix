@@ -11,31 +11,61 @@ let
     else
       lib.generators.toPretty { } v;
   # One line for a table cell: the whole text with its whitespace runs (newlines and indentation included) as single
-  # spaces, cut after the last word that fits in `max` characters, never inside a word. The first two words stay
-  # whatever their length, so a long path or name wraps in the cell rather than leaving `[` alone, and a rest of
-  # three characters or fewer stays too.
+  # spaces. Past `max` characters (and three more, so a closing bracket isn't cut alone) it is cut, at the last break
+  # point (a space, `.`, `/`, `-`, `}` or `,`) in the second half of `max`, otherwise at `max`, and ends in `…`. The
+  # card shows the whole value.
   oneLine =
     max: text:
     let
-      words = lib.filter (w: lib.isString w && w != "") (builtins.split "[[:space:]]+" text);
-      n = builtins.length words;
-      upTo = k: lib.concatStringsSep " " (lib.take k words);
-      # The most words that fit, at least two
-      fitting = lib.max (lib.min 2 n) (
-        lib.foldl' (k: i: if builtins.stringLength (upTo i) <= max then i else k) 0 (lib.range 1 n)
+      joined = lib.concatStringsSep " " (
+        lib.filter (w: lib.isString w && w != "") (builtins.split "[[:space:]]+" text)
       );
-      # A short rest (a closing bracket) goes in rather than leaving an ellipsis for it
-      rest = builtins.stringLength (lib.concatStringsSep " " (lib.drop fitting words));
-      k = if rest <= 3 then n else fitting;
+      breakAt = lib.foldl' (
+        acc: i:
+        if
+          builtins.elem (builtins.substring i 1 joined) [
+            " "
+            "."
+            "/"
+            "-"
+            "}"
+            ","
+          ]
+        then
+          i
+        else
+          acc
+      ) (-1) (lib.range (max / 2) (max - 1));
+      cut = builtins.substring 0 (if breakAt >= 0 then breakAt + 1 else max) joined;
     in
-    if k == n then upTo n else "${upTo k} …";
-  # The first paragraph of a description, on one line
+    if builtins.stringLength joined <= max + 3 then joined else "${lib.removeSuffix " " cut}…";
+  # The row's description: the first sentence of the first paragraph, on one line, cut after the last word within
+  # `max` characters and ended with `…`. A cut never leaves a `code` span or a [link](...) open: it backs off to the
+  # last word before them. The card shows the whole description.
   summary =
-    description:
+    max: description:
     let
       paragraph = builtins.head (lib.splitString "\n\n" (lib.trim description));
+      words = lib.filter (w: lib.isString w && w != "") (builtins.split "[[:space:]]+" paragraph);
+      n = builtins.length words;
+      upTo = k: lib.concatStringsSep " " (lib.take k words);
+      # Words up to the first one that ends a sentence
+      sentenceEnd = lib.findFirst (i: builtins.match ".*[.!?]" (builtins.elemAt words (i - 1)) != null) n (
+        lib.range 1 n
+      );
+      count = re: text: builtins.length (lib.filter lib.isList (builtins.split re text));
+      balanced = text: lib.mod (count "`" text) 2 == 0 && count "\\[" text == count "]\\(" text;
+      fits = k: builtins.stringLength (upTo k) <= max;
+      cutAt = lib.findFirst (k: fits k && balanced (upTo k)) 0 (lib.reverseList (lib.range 1 sentenceEnd));
     in
-    lib.concatStringsSep " " (map lib.trim (lib.splitString "\n" paragraph));
+    if n == 0 then
+      ""
+    else if fits sentenceEnd then
+      upTo sentenceEnd
+    else if cutAt == 0 then
+      upTo sentenceEnd
+    else
+      "${upTo cutAt} …";
   # A block of Nix inside the card. md_in_html needs the fence flush left, and `markdown` on every level from the
   # table down to the cell.
   nixBlock = text: "\n```nix\n${text}\n```\n";
@@ -126,7 +156,7 @@ rec {
           valueLine = if value == null then null else lib.generators.toPretty { multiline = false; } value.value;
           declarations = opt.declarations or [ ];
           declLink = d: if d ? url then "[`${d.name}`](${d.url})" else "`${d.name}`";
-          cell = text: if text == null then "<td>—</td>" else "<td><code>${breakable (oneLine 40 text)}</code></td>";
+          cell = text: if text == null then "<td>—</td>" else "<td><code>${breakable (oneLine 24 text)}</code></td>";
         in
         lib.concatStrings [
           ''<tr class="nd-option" id="${esc name}" tabindex="0" aria-expanded="false" markdown="1">''
@@ -137,9 +167,9 @@ rec {
             if valueText == null then
               ''<td class="nd-value">—</td>''
             else
-              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"${lib.optionalString (value.changed or false) " title=\"Set in this system's configuration\""}><code>${breakable (oneLine 40 valueLine)}</code></td>''
+              ''<td class="nd-value${lib.optionalString (value.changed or false) " nd-changed"}"${lib.optionalString (value.changed or false) " title=\"Set in this system's configuration\""}><code>${breakable (oneLine 24 valueLine)}</code></td>''
           ))
-          ''<td markdown="span">${summary description}</td>''
+          ''<td markdown="span">${summary 72 description}</td>''
           "</tr>\n"
           ''<tr class="nd-card" hidden markdown="1"><td colspan="${toString columns}" markdown="block">''
           "\n\n"
