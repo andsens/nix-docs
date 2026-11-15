@@ -84,13 +84,22 @@
 .nd-options a.nd-name {
   color: inherit;
 }
+/* The card: compact, on the page background so its code blocks stand out */
 .nd-options tr.nd-card > td {
-  background: var(--md-code-bg-color, #f5f5f5);
   border-left: 3px solid var(--md-accent-fg-color, #448aff);
-  padding: 0.5em 1em 1em;
+  padding: 0.2em 0.8em 0.4em 1.8em;
 }
+.nd-options tr.nd-card > td > p,
+.nd-options tr.nd-card > td > ul,
+.nd-options tr.nd-card > td > ol {
+  margin: 0.3em 0;
+}
+.nd-options tr.nd-card .highlight,
 .nd-options tr.nd-card pre {
-  margin: 0.3em 0 0.8em;
+  margin: 0.1em 0 0.3em;
+}
+.nd-options tr.nd-card pre > code {
+  padding: 0.3em 0.6em;
 }
 .nd-options td.nd-value.nd-changed code {
   color: var(--md-accent-fg-color, #448aff);
